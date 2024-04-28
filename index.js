@@ -1,39 +1,34 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const axios = require('axios');
 const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+app.use(express.static('public'));
 
 app.get('/search', async (req, res) => {
   try {
+    const query = req.query.q;
     const url = req.query.url;
 
-    if (!url) {
-      return res.status(400).send('Please provide a valid URL');
+    if (!query && !url) {
+      return res.status(400).send('Please provide a search query or website URL');
     }
 
-    // Launch Puppeteer without any proxy settings
-    const browser = await puppeteer.launch();
-
-    // Open a new page
-    const page = await browser.newPage();
-
-    // Navigate to the specified URL
-    await page.goto(url);
-
-    // Wait for the page to fully load
-    await page.waitForLoadState('networkidle');
-
-    // Get the HTML content after rendering
-    const content = await page.content();
-
-    // Close the browser
-    await browser.close();
-
-    // Send the HTML content as the response
-    res.send(content);
+    if (url) {
+      // If URL provided, fetch the content directly
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
+        }
+      });
+      res.send(response.data);
+    } else {
+      // If it's not a URL, search on Google
+      const response = await axios.get(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
+      res.send(response.data);
+    }
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Internal Server Error');
